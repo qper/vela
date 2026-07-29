@@ -1,1 +1,659 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vela — Diagram Engine (prototype)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f1117;
+      --panel: #1a1d27;
+      --border: #2a2e3b;
+      --text: #e8eaed;
+      --muted: #9aa0a6;
+      --accent: #6366f1;
+      --radius: 12px;
+    }
 
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      gap: 16px;
+    }
+
+    header h1 {
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    header h1 span {
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    button {
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #252836;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    button:hover {
+      background: #2f3344;
+      border-color: #3f4458;
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, #6366f1, #7c3aed);
+      border: none;
+      color: white;
+    }
+
+    button.primary:hover {
+      filter: brightness(1.1);
+    }
+
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      overflow: hidden;
+    }
+
+    .editor-panel {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      background: var(--panel);
+    }
+
+    .panel-header {
+      padding: 10px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    textarea {
+      flex: 1;
+      width: 100%;
+      background: #12141c;
+      border: none;
+      color: #e2e8f0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 1.55;
+      padding: 16px;
+      resize: none;
+      outline: none;
+    }
+
+    .preview-panel {
+      display: flex;
+      flex-direction: column;
+      background: #0c0e14;
+      position: relative;
+    }
+
+    #canvas-container {
+      flex: 1;
+      overflow: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      background-image:
+        radial-gradient(circle at 1px 1px, #1e2230 1px, transparent 0);
+      background-size: 24px 24px;
+    }
+
+    #diagram-svg {
+      max-width: 100%;
+      height: auto;
+      filter: drop-shadow(0 20px 40px rgba(0,0,0,0.5));
+    }
+
+    .status {
+      padding: 8px 16px;
+      font-size: 12px;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      background: var(--panel);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .help {
+      font-size: 11px;
+      color: var(--muted);
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      line-height: 1.5;
+    }
+
+    .help code {
+      background: #252836;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+    }
+
+    select {
+      font-family: inherit;
+      font-size: 13px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #252836;
+      color: var(--text);
+      outline: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="url(#grad)" stroke-width="2">
+        <defs>
+          <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#6366f1"/>
+            <stop offset="100%" stop-color="#a855f7"/>
+          </linearGradient>
+        </defs>
+        <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+        <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+      </svg>
+      <span>Vela</span>
+      <small style="font-size:11px;color:var(--muted);font-weight:400">DSL · v0.0.1</small>
+    </h1>
+    <div class="controls">
+      <select id="themeSelect">
+        <option value="modern-dark">Modern Dark</option>
+        <option value="modern-light">Modern Light</option>
+        <option value="glass">Glass</option>
+        <option value="neo">Neo Brutal</option>
+      </select>
+      <button id="btnRender" class="primary">▶ Render</button>
+      <button id="btnExportSvg">↓ SVG</button>
+      <button id="btnExportPng">↓ PNG</button>
+      <button id="btnExample">↺ Example</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="editor-panel">
+      <div class="panel-header">
+        <span>DSL Code</span>
+        <span style="font-weight:400;text-transform:none;letter-spacing:0">Ctrl+Enter to render</span>
+      </div>
+      <textarea id="code" spellcheck="false"></textarea>
+      <div class="help">
+        <strong>Syntax:</strong><br>
+        <code>NodeID: Label</code> or <code>NodeID: Label {style: primary}</code><br>
+        <code>A --> B</code> or <code>A --> B : "label"</code><br>
+        <code>theme: modern-dark</code> · styles: primary, success, warning, danger, muted, glass, database, service
+      </div>
+    </div>
+
+    <div class="preview-panel">
+      <div class="panel-header">
+        <span>Preview</span>
+        <span id="nodeCount" style="font-weight:400;text-transform:none;letter-spacing:0"></span>
+      </div>
+      <div id="canvas-container">
+        <div id="placeholder" style="color:var(--muted);text-align:center">
+          <div style="font-size:40px;margin-bottom:12px;opacity:0.3">◈</div>
+          <div>Напиши код слева и нажми Render</div>
+        </div>
+      </div>
+      <div id="statusBar" class="status">
+        <span id="status">Ready</span>
+        <span id="sizeInfo"></span>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const THEMES = {
+      'modern-dark': {
+        bg: '#0f1117',
+        nodeBg: '#1e2230',
+        nodeBorder: '#2d3348',
+        text: '#e8eaed',
+        muted: '#8b93a7',
+        accent: '#6366f1',
+        edge: '#4b5563',
+        edgeLabelBg: '#1a1d27',
+        nodeRadius: 14,
+        font: 'Inter, system-ui, sans-serif'
+      },
+      'modern-light': {
+        bg: '#f8fafc',
+        nodeBg: '#ffffff',
+        nodeBorder: '#e2e8f0',
+        text: '#0f172a',
+        muted: '#64748b',
+        accent: '#4f46e5',
+        edge: '#94a3b8',
+        edgeLabelBg: '#f1f5f9',
+        nodeRadius: 14,
+        font: 'Inter, system-ui, sans-serif'
+      },
+      'glass': {
+        bg: '#0b0d14',
+        nodeBg: 'rgba(30, 35, 55, 0.75)',
+        nodeBorder: 'rgba(99, 102, 241, 0.4)',
+        text: '#f1f5f9',
+        muted: '#94a3b8',
+        accent: '#818cf8',
+        edge: '#475569',
+        edgeLabelBg: 'rgba(15, 17, 27, 0.9)',
+        nodeRadius: 16,
+        font: 'Inter, system-ui, sans-serif'
+      },
+      'neo': {
+        bg: '#fefce8',
+        nodeBg: '#fef08a',
+        nodeBorder: '#0f172a',
+        text: '#0f172a',
+        muted: '#422006',
+        accent: '#e11d48',
+        edge: '#0f172a',
+        edgeLabelBg: '#fef08a',
+        nodeRadius: 4,
+        font: 'Inter, system-ui, sans-serif'
+      }
+    };
+
+    const STYLE_COLORS = {
+      primary:  { bg: '#312e81', border: '#6366f1', text: '#e0e7ff' },
+      success:  { bg: '#14532d', border: '#22c55e', text: '#bbf7d0' },
+      warning:  { bg: '#713f12', border: '#eab308', text: '#fef9c3' },
+      danger:   { bg: '#7f1d1d', border: '#ef4444', text: '#fecaca' },
+      muted:    { bg: '#1e293b', border: '#475569', text: '#cbd5e1' },
+      glass:    { bg: 'rgba(99,102,241,0.18)', border: 'rgba(99,102,241,0.55)', text: '#e0e7ff' },
+      database: { bg: '#164e63', border: '#06b6d4', text: '#cffafe' },
+      service:  { bg: '#3b0764', border: '#a855f7', text: '#f3e8ff' },
+    };
+
+    function parseDSL(code) {
+      const lines = code.split('\n');
+      const nodes = new Map();
+      const edges = [];
+      let theme = 'modern-dark';
+      let errors = [];
+
+      lines.forEach((raw, idx) => {
+        const line = raw.trim();
+        if (!line || line.startsWith('//') || line.startsWith('#')) return;
+
+        if (/^theme\s*:/i.test(line)) {
+          theme = line.split(':')[1].trim().toLowerCase();
+          return;
+        }
+
+        const edgeMatch = line.match(/^(\w+)\s*(-{1,2}>|→)\s*(\w+)(?:\s*:\s*["']?([^"']+)["']?)?$/);
+        if (edgeMatch) {
+          const [, from, , to, label] = edgeMatch;
+          edges.push({ from, to, label: label ? label.trim() : null });
+          if (!nodes.has(from)) nodes.set(from, { id: from, label: from, style: null });
+          if (!nodes.has(to)) nodes.set(to, { id: to, label: to, style: null });
+          return;
+        }
+
+        const nodeMatch = line.match(/^(\w+)\s*:\s*(.+)$/);
+        if (nodeMatch) {
+          let [, id, rest] = nodeMatch;
+          let label = rest;
+          let style = null;
+          let attrs = {};
+
+          const brace = rest.match(/^(.*?)\s*\{([^}]*)\}\s*$/);
+          if (brace) {
+            label = brace[1].trim();
+            const attrStr = brace[2];
+            attrStr.split(',').forEach(pair => {
+              const parts = pair.split(':').map(s => s.trim());
+              if (parts[0] && parts[1]) {
+                attrs[parts[0]] = parts[1];
+                if (parts[0] === 'style' || parts[0] === 'type') style = parts[1];
+              }
+            });
+          }
+
+          label = label.replace(/^["']|["']$/g, '');
+          nodes.set(id, { id, label, style, attrs });
+          return;
+        }
+
+        errors.push('Line ' + (idx + 1) + ': cannot parse "' + line + '"');
+      });
+
+      return { nodes: Array.from(nodes.values()), edges, theme, errors };
+    }
+
+    function layout(nodes, edges) {
+      const inDegree = {};
+      const children = {};
+      nodes.forEach(n => {
+        inDegree[n.id] = 0;
+        children[n.id] = [];
+      });
+      edges.forEach(e => {
+        if (children[e.from]) children[e.from].push(e.to);
+        if (inDegree[e.to] !== undefined) inDegree[e.to]++;
+      });
+
+      const layers = [];
+      let queue = nodes.filter(n => inDegree[n.id] === 0).map(n => n.id);
+      const visited = new Set();
+
+      while (queue.length) {
+        layers.push([...queue]);
+        const next = [];
+        queue.forEach(id => {
+          visited.add(id);
+          (children[id] || []).forEach(child => {
+            inDegree[child]--;
+            if (inDegree[child] === 0 && !visited.has(child)) {
+              next.push(child);
+            }
+          });
+        });
+        queue = next;
+      }
+
+      nodes.forEach(n => {
+        if (!visited.has(n.id)) {
+          if (layers.length === 0) layers.push([]);
+          layers[layers.length - 1].push(n.id);
+        }
+      });
+
+      const NODE_W = 180;
+      const NODE_H = 64;
+      const GAP_X = 80;
+      const GAP_Y = 90;
+      const pos = {};
+
+      layers.forEach((layer, li) => {
+        const totalW = layer.length * NODE_W + (layer.length - 1) * GAP_X;
+        const startX = -totalW / 2 + NODE_W / 2;
+        layer.forEach((id, i) => {
+          pos[id] = {
+            x: startX + i * (NODE_W + GAP_X),
+            y: li * (NODE_H + GAP_Y),
+            w: NODE_W,
+            h: NODE_H
+          };
+        });
+      });
+
+      return { pos, nodeW: NODE_W, nodeH: NODE_H };
+    }
+
+    function escapeXml(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function render(model, themeName) {
+      const theme = THEMES[themeName] || THEMES['modern-dark'];
+      const { nodes, edges } = model;
+      const { pos } = layout(nodes, edges);
+
+      if (nodes.length === 0) {
+        return { svg: null, width: 0, height: 0 };
+      }
+
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      Object.values(pos).forEach(p => {
+        minX = Math.min(minX, p.x - p.w / 2);
+        minY = Math.min(minY, p.y - p.h / 2);
+        maxX = Math.max(maxX, p.x + p.w / 2);
+        maxY = Math.max(maxY, p.y + p.h / 2);
+      });
+
+      const PAD = 60;
+      const width = maxX - minX + PAD * 2;
+      const height = maxY - minY + PAD * 2;
+      const ox = -minX + PAD;
+      const oy = -minY + PAD;
+
+      let svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">\n';
+      svg += '  <defs>\n';
+      svg += '    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">\n';
+      svg += '      <path d="M 0 0 L 10 5 L 0 10 z" fill="' + theme.edge + '"/>\n';
+      svg += '    </marker>\n';
+      svg += '    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">\n';
+      svg += '      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-opacity="0.35"/>\n';
+      svg += '    </filter>\n';
+      svg += '    <linearGradient id="nodeGrad" x1="0%" y1="0%" x2="0%" y2="100%">\n';
+      svg += '      <stop offset="0%" stop-color="rgba(255,255,255,0.06)"/>\n';
+      svg += '      <stop offset="100%" stop-color="rgba(0,0,0,0.08)"/>\n';
+      svg += '    </linearGradient>\n';
+      svg += '  </defs>\n';
+      svg += '  <rect width="100%" height="100%" fill="' + theme.bg + '"/>\n';
+
+      edges.forEach(e => {
+        const a = pos[e.from];
+        const b = pos[e.to];
+        if (!a || !b) return;
+
+        const x1 = a.x + ox;
+        const y1 = a.y + a.h / 2 + oy;
+        const x2 = b.x + ox;
+        const y2 = b.y - b.h / 2 + oy;
+
+        const midY = (y1 + y2) / 2;
+        const d = 'M ' + x1 + ' ' + y1 + ' C ' + x1 + ' ' + midY + ', ' + x2 + ' ' + midY + ', ' + x2 + ' ' + y2;
+
+        svg += '  <path d="' + d + '" fill="none" stroke="' + theme.edge + '" stroke-width="2" marker-end="url(#arrow)" opacity="0.85"/>\n';
+
+        if (e.label) {
+          const lx = (x1 + x2) / 2;
+          const ly = midY;
+          const labelW = e.label.length * 7.2 + 16;
+          svg += '  <rect x="' + (lx - labelW / 2) + '" y="' + (ly - 11) + '" width="' + labelW + '" height="22" rx="6" fill="' + theme.edgeLabelBg + '" stroke="' + theme.edge + '" stroke-width="1"/>\n';
+          svg += '  <text x="' + lx + '" y="' + (ly + 4) + '" text-anchor="middle" font-family="' + theme.font + '" font-size="11" fill="' + theme.muted + '" font-weight="500">' + escapeXml(e.label) + '</text>\n';
+        }
+      });
+
+      nodes.forEach(n => {
+        const p = pos[n.id];
+        if (!p) return;
+        const x = p.x - p.w / 2 + ox;
+        const y = p.y - p.h / 2 + oy;
+
+        let bg = theme.nodeBg;
+        let border = theme.nodeBorder;
+        let textColor = theme.text;
+
+        if (n.style && STYLE_COLORS[n.style]) {
+          const s = STYLE_COLORS[n.style];
+          bg = s.bg;
+          border = s.border;
+          textColor = s.text;
+        }
+
+        if (themeName === 'neo') {
+          border = '#0f172a';
+        }
+
+        svg += '  <g filter="url(#shadow)">\n';
+        svg += '    <rect x="' + x + '" y="' + y + '" width="' + p.w + '" height="' + p.h + '" rx="' + theme.nodeRadius + '" fill="' + bg + '" stroke="' + border + '" stroke-width="' + (themeName === 'neo' ? 2.5 : 1.5) + '"/>\n';
+        svg += '    <rect x="' + x + '" y="' + y + '" width="' + p.w + '" height="' + p.h + '" rx="' + theme.nodeRadius + '" fill="url(#nodeGrad)"/>\n';
+        svg += '    <text x="' + (p.x + ox) + '" y="' + (p.y + oy - 6) + '" text-anchor="middle" font-family="' + theme.font + '" font-size="14" font-weight="600" fill="' + textColor + '">' + escapeXml(n.label) + '</text>\n';
+        svg += '    <text x="' + (p.x + ox) + '" y="' + (p.y + oy + 12) + '" text-anchor="middle" font-family="' + theme.font + '" font-size="11" fill="' + theme.muted + '">' + escapeXml(n.id) + '</text>\n';
+        svg += '  </g>\n';
+      });
+
+      svg += '</svg>';
+      return { svg: svg, width: width, height: height };
+    }
+
+    const codeEl = document.getElementById('code');
+    const container = document.getElementById('canvas-container');
+    const statusEl = document.getElementById('status');
+    const nodeCountEl = document.getElementById('nodeCount');
+    const sizeInfoEl = document.getElementById('sizeInfo');
+    const themeSelect = document.getElementById('themeSelect');
+
+    const EXAMPLE = `theme: modern-dark
+
+// Nodes
+Frontend: React App {style: primary}
+Gateway: API Gateway {style: service}
+Auth: Auth Service {style: warning}
+Users: User Service {style: success}
+Orders: Order Service
+DB: PostgreSQL {style: database}
+Cache: Redis {style: muted}
+Queue: RabbitMQ {style: danger}
+
+// Edges
+Frontend --> Gateway : "HTTPS"
+Gateway --> Auth : "JWT"
+Gateway --> Users
+Gateway --> Orders
+Users --> DB
+Orders --> DB
+Orders --> Queue : "events"
+Users --> Cache
+Auth --> DB
+`;
+
+    function doRender() {
+      const code = codeEl.value;
+      const model = parseDSL(code);
+      const themeName = themeSelect.value || model.theme || 'modern-dark';
+
+      if (model.errors.length) {
+        statusEl.innerHTML = '<span style="color:#f87171">Errors: ' + model.errors.join('; ') + '</span>';
+      } else {
+        statusEl.textContent = 'Rendered successfully';
+      }
+
+      nodeCountEl.textContent = model.nodes.length + ' nodes · ' + model.edges.length + ' edges';
+
+      const result = render(model, themeName);
+      if (!result.svg) {
+        container.innerHTML = '<div id="placeholder" style="color:var(--muted);text-align:center"><div style="font-size:40px;margin-bottom:12px;opacity:0.3">◈</div><div>Нет нод для отрисовки</div></div>';
+        return;
+      }
+
+      container.innerHTML = result.svg;
+      const svgEl = container.querySelector('svg');
+      if (svgEl) svgEl.id = 'diagram-svg';
+      sizeInfoEl.textContent = Math.round(result.width) + ' × ' + Math.round(result.height) + ' px';
+    }
+
+    function exportSvg() {
+      const svg = container.querySelector('svg');
+      if (!svg) return alert('Сначала отрендери диаграмму');
+      const blob = new Blob([svg.outerHTML], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'diagram.svg';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportPng() {
+      const svg = container.querySelector('svg');
+      if (!svg) return alert('Сначала отрендери диаграмму');
+
+      const serializer = new XMLSerializer();
+      const svgStr = serializer.serializeToString(svg);
+      const img = new Image();
+      const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        const scale = 2;
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(scale, scale);
+        ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+
+        canvas.toBlob(function(b) {
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(b);
+          a.download = 'diagram.png';
+          a.click();
+        }, 'image/png');
+      };
+      img.src = url;
+    }
+
+    document.getElementById('btnRender').onclick = doRender;
+    document.getElementById('btnExportSvg').onclick = exportSvg;
+    document.getElementById('btnExportPng').onclick = exportPng;
+    document.getElementById('btnExample').onclick = function() {
+      codeEl.value = EXAMPLE;
+      doRender();
+    };
+    themeSelect.onchange = doRender;
+
+    codeEl.addEventListener('keydown', function(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        doRender();
+      }
+    });
+
+    codeEl.value = EXAMPLE;
+    doRender();
+  </script>
+</body>
+</html>
