@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Docs Search Prototype</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --border: #2d3a4f;
+      --text: #e7ecf3;
+      --muted: #8b9bb4;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --highlight: #fbbf24;
+      --success: #34d399;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem;
+    }
+
+    header {
+      margin-bottom: 2rem;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.35rem;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .search-box {
+      position: relative;
+      margin-bottom: 1.5rem;
+    }
+
+    #search {
+      width: 100%;
+      padding: 0.9rem 1.1rem 0.9rem 2.8rem;
+      font-size: 1.05rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    #search:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+    }
+
+    #search::placeholder {
+      color: var(--muted);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    .meta {
+      display: flex;
+      gap: 1.25rem;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .meta span strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    #results {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .result {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.15rem;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .result:hover {
+      border-color: var(--accent);
+      background: #1e2a3d;
+    }
+
+    .result-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+      color: var(--text);
+    }
+
+    .result-title mark {
+      background: transparent;
+      color: var(--highlight);
+      font-weight: 700;
+    }
+
+    .result-snippet {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 0.45rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .result-snippet mark {
+      background: rgba(251, 191, 36, 0.15);
+      color: var(--highlight);
+      border-radius: 2px;
+      padding: 0 2px;
+    }
+
+    .result-meta {
+      font-size: 0.8rem;
+      color: var(--muted);
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .result-meta a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .result-meta a:hover {
+      text-decoration: underline;
+    }
+
+    .empty, .loading, .error {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--muted);
+    }
+
+    .empty strong, .error strong {
+      color: var(--text);
+    }
+
+    .score {
+      font-variant-numeric: tabular-nums;
+      opacity: 0.7;
+    }
+
+    kbd {
+      background: var(--border);
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.8em;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Docs Search Prototype</h1>
+      <p class="subtitle">Клиентский мгновенный поиск по локальным XHTML-статьям (Fuse.js)</p>
+    </header>
+
+    <div class="search-box">
+      <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+      </svg>
+      <input
+        id="search"
+        type="search"
+        placeholder="Начните вводить… (например: ingress, tls, namespace, restore)"
+        autocomplete="off"
+        autofocus
+      />
+    </div>
+
+    <div class="meta">
+      <span>Документов: <strong id="doc-count">—</strong></span>
+      <span>Индекс: <strong id="index-size">—</strong></span>
+      <span>Задержка: <strong id="latency">—</strong></span>
+    </div>
+
+    <div id="results">
+      <div class="loading">Загрузка индекса…</div>
+    </div>
+  </div>
+
+  <!-- Fuse.js (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0"></script>
+
+  <script>
+    // ---------- Конфигурация Fuse ----------
+    const FUSE_OPTIONS = {
+      includeScore: true,
+      includeMatches: true,
+      threshold: 0.38,          // 0.0 = exact, 1.0 = match anything
+      ignoreLocation: true,
+      useExtendedSearch: false,
+      minMatchCharLength: 1,
+      keys: [
+        { name: "title",     weight: 0.45 },
+        { name: "aliases",   weight: 0.25 },
+        { name: "headings",  weight: 0.15 },
+        { name: "content",   weight: 0.10 },
+        { name: "snippet",   weight: 0.05 },
+      ]
+    };
+
+    let fuse = null;
+    let documents = [];
+    let indexMeta = {};
+
+    // ---------- Загрузка индекса ----------
+    async function loadIndex() {
+      const resultsEl = document.getElementById("results");
+      try {
+        const resp = await fetch("./search-index.json", { cache: "no-store" });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+
+        documents = data.documents || [];
+        indexMeta = data;
+
+        document.getElementById("doc-count").textContent = data.document_count ?? documents.length;
+
+        // Примерный размер
+        const sizeKB = (JSON.stringify(data).length / 1024).toFixed(1);
+        document.getElementById("index-size").textContent = sizeKB + " KB";
+
+        fuse = new Fuse(documents, FUSE_OPTIONS);
+
+        resultsEl.innerHTML = `
+          <div class="empty">
+            Индекс загружен.<br>
+            Начните вводить запрос. Поиск работает полностью в браузере.
+          </div>`;
+      } catch (err) {
+        console.error(err);
+        resultsEl.innerHTML = `
+          <div class="error">
+            <strong>Не удалось загрузить search-index.json</strong><br><br>
+            Убедитесь, что вы:<br>
+            1. Положили XHTML-файлы в папку <code>data/</code><br>
+            2. Запустили <code>python indexer.py</code><br>
+            3. Открываете страницу через локальный сервер<br>
+               (не через file://)<br><br>
+            Пример: <code>python -m http.server 8000 --directory public</code>
+          </div>`;
+      }
+    }
+
+    // ---------- Подсветка совпадений ----------
+    function highlight(text, indices) {
+      if (!indices || !indices.length || !text) return escapeHtml(text);
+
+      // Fuse возвращает массив [start, end] (inclusive)
+      let result = "";
+      let lastIndex = 0;
+
+      // Сортируем и склеиваем overlapping
+      const ranges = indices
+        .map(([s, e]) => [s, e + 1])
+        .sort((a, b) => a[0] - b[0]);
+
+      for (const [start, end] of ranges) {
+        if (start > lastIndex) {
+          result += escapeHtml(text.slice(lastIndex, start));
+        }
+        result += "<mark>" + escapeHtml(text.slice(start, end)) + "</mark>";
+        lastIndex = Math.max(lastIndex, end);
+      }
+      result += escapeHtml(text.slice(lastIndex));
+      return result;
+    }
+
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    // ---------- Рендер результатов ----------
+    function renderResults(query, hits, elapsedMs) {
+      const resultsEl = document.getElementById("results");
+      document.getElementById("latency").textContent = elapsedMs.toFixed(1) + " ms";
+
+      if (!query.trim()) {
+        resultsEl.innerHTML = `
+          <div class="empty">
+            Начните вводить запрос.<br>
+            Поддерживается нечёткий поиск, частичные совпадения и поиск по заголовкам.
+          </div>`;
+        return;
+      }
+
+      if (hits.length === 0) {
+        resultsEl.innerHTML = `
+          <div class="empty">
+            <strong>Ничего не найдено</strong> по запросу «${escapeHtml(query)}».<br>
+            Попробуйте другой запрос или проверьте, что статьи проиндексированы.
+          </div>`;
+        return;
+      }
+
+      const html = hits.map((hit, idx) => {
+        const doc = hit.item;
+        const score = hit.score != null ? (1 - hit.score).toFixed(3) : "—";
+
+        // Подсветка title
+        let titleHtml = escapeHtml(doc.title);
+        const titleMatch = (hit.matches || []).find(m => m.key === "title");
+        if (titleMatch && titleMatch.indices) {
+          titleHtml = highlight(doc.title, titleMatch.indices);
+        }
+
+        // Сниппет
+        let snippetHtml = escapeHtml(doc.snippet || "");
+        const contentMatch = (hit.matches || []).find(m => m.key === "content" || m.key === "snippet");
+        if (contentMatch && contentMatch.indices && doc.snippet) {
+          // Для простоты подсвечиваем только если indices в пределах snippet
+          // (в реальном прототипе можно улучшить)
+        }
+
+        return `
+          <a class="result" href="${escapeHtml(doc.url)}" target="_blank" rel="noopener">
+            <div class="result-title">${titleHtml}</div>
+            <div class="result-snippet">${snippetHtml}</div>
+            <div class="result-meta">
+              <span>ID: ${escapeHtml(doc.id)}</span>
+              <span>${doc.word_count || "?"} слов</span>
+              <span class="score">score: ${score}</span>
+              <span><a href="${escapeHtml(doc.url)}" target="_blank">открыть файл →</a></span>
+            </div>
+          </a>`;
+      }).join("");
+
+      resultsEl.innerHTML = html;
+    }
+
+    // ---------- Обработка ввода ----------
+    let debounceTimer = null;
+
+    function onInput(e) {
+      const query = e.target.value;
+
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        if (!fuse) return;
+
+        const t0 = performance.now();
+        const hits = fuse.search(query, { limit: 20 });
+        const elapsed = performance.now() - t0;
+
+        renderResults(query, hits, elapsed);
+      }, 40); // небольшой debounce
+    }
+
+    // ---------- Старт ----------
+    document.getElementById("search").addEventListener("input", onInput);
+    loadIndex();
+  </script>
+</body>
+</html>

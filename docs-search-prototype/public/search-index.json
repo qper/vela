@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "generated_at": "2026-07-30T20:46:44.532960+00:00",
+  "document_count": 4,
+  "documents": [
+    {
+      "id": "1001",
+      "title": "Configure Ingress",
+      "aliases": [
+        "Configure",
+        "Ingress"
+      ],
+      "headings": [
+        "Configure Ingress",
+        "Prerequisites",
+        "Steps"
+      ],
+      "content": "Configure Ingress Configure Ingress This how-to describes how to configure an Ingress resource in Kubernetes / GKE. Prerequisites You need a running cluster and kubectl configured. Steps Create Ingress manifest with TLS Apply the manifest Verify with kubectl get ingress Related topics: TLS certificates, cert-manager, LoadBalancer, HTTPS.",
+      "snippet": "Configure Ingress Configure Ingress This how-to describes how to configure an Ingress resource in Kubernetes / GKE. Prerequisites You need a running cluster and kubectl configured. Steps Create Ingress manifest with TLS Apply the manifest Verify with kubectl get ingress Related topics: TLS certifica…",
+      "path": "1001.xhtml",
+      "url": "./data/1001.xhtml",
+      "char_count": 339,
+      "word_count": 47
+    },
+    {
+      "id": "1002",
+      "title": "Create namespace",
+      "aliases": [
+        "Create",
+        "namespace"
+      ],
+      "headings": [
+        "Create namespace",
+        "Command"
+      ],
+      "content": "Create namespace Create namespace How to create a new Kubernetes namespace (ns). Command kubectl create namespace my-ns Also known as: k8s namespace, create ns.",
+      "snippet": "Create namespace Create namespace How to create a new Kubernetes namespace (ns). Command kubectl create namespace my-ns Also known as: k8s namespace, create ns.",
+      "path": "1002.xhtml",
+      "url": "./data/1002.xhtml",
+      "char_count": 160,
+      "word_count": 24
+    },
+    {
+      "id": "1003",
+      "title": "Restore database backup",
+      "aliases": [
+        "Restore",
+        "database",
+        "backup"
+      ],
+      "headings": [
+        "Restore database backup",
+        "Steps"
+      ],
+      "content": "Restore database backup Restore database backup Procedure to restore a database from backup (restore db, recover database). Steps Stop the application Restore from the latest backup Verify data integrity",
+      "snippet": "Restore database backup Restore database backup Procedure to restore a database from backup (restore db, recover database). Steps Stop the application Restore from the latest backup Verify data integrity",
+      "path": "1003.xhtml",
+      "url": "./data/1003.xhtml",
+      "char_count": 203,
+      "word_count": 29
+    },
+    {
+      "id": "1004",
+      "title": "Rotate secrets",
+      "aliases": [
+        "Rotate",
+        "secrets"
+      ],
+      "headings": [
+        "Rotate secrets"
+      ],
+      "content": "Rotate secrets Rotate secrets How to rotate Kubernetes secrets and sync with Vault / GSM. Includes Workload Identity and service accounts (GSA, KSA).",
+      "snippet": "Rotate secrets Rotate secrets How to rotate Kubernetes secrets and sync with Vault / GSM. Includes Workload Identity and service accounts (GSA, KSA).",
+      "path": "1004.xhtml",
+      "url": "./data/1004.xhtml",
+      "char_count": 149,
+      "word_count": 23
+    }
+  ]
+}
